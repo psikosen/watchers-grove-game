@@ -1,0 +1,1746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Watcher's Grove - Enhanced Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Creepster&family=Griffy&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Griffy', cursive;
+            background-color: #050505;
+            color: #e0e0e0;
+            overflow: hidden;
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="10" fill="none" stroke="%238b7355" stroke-width="2"/><circle cx="16" cy="16" r="3" fill="%238b7355"/></svg>'), auto;
+        }
+
+        #gameCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            filter: contrast(1.1);
+        }
+
+        #ui {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        #title {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            transition: all 2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #title h1 {
+            font-family: 'Creepster', cursive;
+            font-size: 5rem;
+            color: #8b7355;
+            text-shadow: 
+                0 0 20px rgba(139, 115, 85, 0.5),
+                0 0 40px rgba(139, 115, 85, 0.3),
+                0 0 60px rgba(139, 115, 85, 0.1);
+            margin-bottom: 2rem;
+            animation: titlePulse 4s ease-in-out infinite;
+            letter-spacing: 0.1em;
+        }
+
+        @keyframes titlePulse {
+            0%, 100% { 
+                opacity: 0.8; 
+                transform: scale(1) rotateZ(0deg);
+            }
+            50% { 
+                opacity: 1; 
+                transform: scale(1.05) rotateZ(-1deg);
+            }
+        }
+
+        .menu-button {
+            padding: 1rem 2rem;
+            margin: 0.5rem;
+            font-size: 1.2rem;
+            font-family: 'Griffy', cursive;
+            background: rgba(139, 115, 85, 0.1);
+            border: 2px solid #8b7355;
+            color: #8b7355;
+            cursor: pointer;
+            transition: all 0.3s;
+            pointer-events: all;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .menu-button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: radial-gradient(circle, rgba(139, 115, 85, 0.3) 0%, transparent 70%);
+            transition: all 0.5s;
+            transform: translate(-50%, -50%);
+        }
+
+        .menu-button:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .menu-button:hover {
+            background: rgba(139, 115, 85, 0.2);
+            color: #fff;
+            box-shadow: 0 0 30px rgba(139, 115, 85, 0.5);
+            transform: translateY(-2px);
+        }
+
+        #gameMode {
+            margin-top: 2rem;
+        }
+
+        #narrative {
+            position: absolute;
+            bottom: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            max-width: 700px;
+            text-align: center;
+            font-size: 1.3rem;
+            line-height: 1.8;
+            color: #b8a590;
+            opacity: 0;
+            transition: opacity 1s;
+            pointer-events: none;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.5);
+            padding: 1rem 2rem;
+            border-radius: 10px;
+        }
+
+        #stats {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.1rem;
+            opacity: 0;
+            transition: opacity 1s;
+            background: rgba(0,0,0,0.7);
+            padding: 1rem;
+            border-radius: 10px;
+            border: 1px solid #8b7355;
+            min-width: 200px;
+        }
+
+        #stats div {
+            margin: 0.5rem 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .stat-bar {
+            width: 100px;
+            height: 10px;
+            background: rgba(139, 115, 85, 0.2);
+            border: 1px solid #8b7355;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-left: 10px;
+        }
+
+        .stat-fill {
+            height: 100%;
+            background: linear-gradient(to right, #8b7355, #a08060);
+            transition: width 0.5s ease-out;
+        }
+
+        #sanityBar { background: linear-gradient(to right, #8b7355, #ff6b6b); }
+        #insightBar { background: linear-gradient(to right, #4a7c7e, #6bb6b8); }
+        #powerBar { background: linear-gradient(to right, #7c4a7e, #b86bb8); }
+
+        .eye {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #4a3f2a, #2a1f0a);
+            border: 3px solid #1a1510;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 
+                inset 0 0 10px rgba(0,0,0,0.8),
+                0 2px 10px rgba(0,0,0,0.5);
+            transform-style: preserve-3d;
+        }
+
+        .eye::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 40% 40%, #0a0a0a, #2a1f0a);
+            transition: all 0.3s;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.8);
+        }
+
+        .eye::after {
+            content: '';
+            position: absolute;
+            top: 25%;
+            left: 30%;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transition: all 0.3s;
+        }
+
+        .eye:hover {
+            transform: scale(1.2) rotateZ(5deg);
+            box-shadow: 
+                0 0 30px rgba(139, 115, 85, 0.6),
+                inset 0 0 10px rgba(0,0,0,0.8),
+                0 4px 20px rgba(0,0,0,0.7);
+        }
+
+        .eye.active {
+            background: radial-gradient(circle at 30% 30%, #d4a574, #8b7355);
+            animation: eyeGlow 0.8s ease-in-out;
+            transform: scale(1.3);
+        }
+
+        .eye.corrupted {
+            background: radial-gradient(circle at 30% 30%, #8b1f1f, #4a0f0f);
+            animation: eyeCorrupt 0.5s infinite;
+        }
+
+        .eye.ancient {
+            background: radial-gradient(circle at 30% 30%, #4a7c7e, #2a4c4e);
+            animation: eyeAncient 2s infinite;
+        }
+
+        @keyframes eyeGlow {
+            0% { 
+                box-shadow: 0 0 20px rgba(139, 115, 85, 0.5), inset 0 0 10px rgba(0,0,0,0.5);
+                transform: scale(1) rotateZ(0deg);
+            }
+            50% { 
+                box-shadow: 0 0 60px rgba(139, 115, 85, 1), inset 0 0 20px rgba(139, 115, 85, 0.3);
+                transform: scale(1.4) rotateZ(180deg);
+            }
+            100% { 
+                box-shadow: 0 0 20px rgba(139, 115, 85, 0.5), inset 0 0 10px rgba(0,0,0,0.5);
+                transform: scale(1.3) rotateZ(360deg);
+            }
+        }
+
+        @keyframes eyeCorrupt {
+            0%, 100% { transform: scale(1) translateX(0); }
+            25% { transform: scale(1.1) translateX(-2px); }
+            75% { transform: scale(0.9) translateX(2px); }
+        }
+
+        @keyframes eyeAncient {
+            0%, 100% { 
+                box-shadow: 0 0 20px rgba(74, 124, 126, 0.5), inset 0 0 10px rgba(0,0,0,0.5);
+                transform: scale(1);
+            }
+            50% { 
+                box-shadow: 0 0 40px rgba(74, 124, 126, 0.8), inset 0 0 15px rgba(74, 124, 126, 0.3);
+                transform: scale(1.05);
+            }
+        }
+
+        .particle {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            pointer-events: none;
+            mix-blend-mode: screen;
+        }
+
+        .vision-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+            opacity: 0;
+            transition: opacity 2s;
+        }
+
+        .madness-effect {
+            background: radial-gradient(circle at center, transparent 30%, rgba(139, 19, 19, 0.3) 100%);
+            animation: madnessPulse 3s infinite;
+        }
+
+        @keyframes madnessPulse {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 0.5; }
+        }
+
+        #powerUps {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            opacity: 0;
+            transition: opacity 1s;
+        }
+
+        .power-up {
+            width: 60px;
+            height: 60px;
+            border: 2px solid #8b7355;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            pointer-events: all;
+            font-size: 24px;
+        }
+
+        .power-up:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(139, 115, 85, 0.5);
+        }
+
+        .power-up.active {
+            background: rgba(139, 115, 85, 0.3);
+            animation: powerPulse 1s infinite;
+        }
+
+        .power-up.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        @keyframes powerPulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(139, 115, 85, 0.5); }
+            50% { box-shadow: 0 0 30px rgba(139, 115, 85, 0.8); }
+        }
+
+        #endScreen, #pauseMenu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            backdrop-filter: blur(5px);
+        }
+
+        #endScreen div, #pauseMenu div {
+            text-align: center;
+            animation: fadeIn 1s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #endScreen h2, #pauseMenu h2 {
+            font-family: 'Creepster', cursive;
+            font-size: 3rem;
+            color: #8b7355;
+            margin-bottom: 2rem;
+            text-shadow: 0 0 30px rgba(139, 115, 85, 0.5);
+        }
+
+        #endScreen p, #pauseMenu p {
+            font-size: 1.5rem;
+            color: #b8a590;
+            margin-bottom: 2rem;
+            max-width: 600px;
+        }
+
+        .achievement {
+            position: fixed;
+            top: 100px;
+            right: -400px;
+            background: rgba(0,0,0,0.9);
+            border: 2px solid #8b7355;
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            transition: right 0.5s;
+            z-index: 30;
+        }
+
+        .achievement.show {
+            right: 20px;
+        }
+
+        .achievement h3 {
+            color: #8b7355;
+            margin-bottom: 0.5rem;
+        }
+
+        #combo {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            color: #8b7355;
+            opacity: 0;
+            pointer-events: none;
+            text-shadow: 0 0 30px rgba(139, 115, 85, 0.8);
+            font-family: 'Creepster', cursive;
+        }
+
+        .combo-animation {
+            animation: comboPopup 1s ease-out;
+        }
+
+        @keyframes comboPopup {
+            0% { 
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.5);
+            }
+            50% { 
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.5);
+            }
+            100% { 
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(2);
+            }
+        }
+
+        .rune {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            opacity: 0.3;
+            pointer-events: none;
+            animation: runeFloat 10s infinite ease-in-out;
+        }
+
+        @keyframes runeFloat {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+
+        #leaderboard {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.8);
+            border: 1px solid #8b7355;
+            padding: 1rem;
+            border-radius: 10px;
+            display: none;
+            min-width: 200px;
+        }
+
+        #leaderboard h3 {
+            color: #8b7355;
+            margin-bottom: 1rem;
+        }
+
+        #leaderboard ol {
+            list-style: none;
+            color: #b8a590;
+        }
+
+        #leaderboard li {
+            margin: 0.5rem 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .floating-text {
+            position: absolute;
+            color: #8b7355;
+            font-size: 1.5rem;
+            font-weight: bold;
+            pointer-events: none;
+            animation: floatUp 2s ease-out forwards;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+        }
+
+        @keyframes floatUp {
+            0% { 
+                opacity: 1;
+                transform: translateY(0);
+            }
+            100% { 
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+        }
+
+        #difficultySelect {
+            margin-top: 1rem;
+        }
+
+        select {
+            padding: 0.5rem 1rem;
+            font-family: 'Griffy', cursive;
+            font-size: 1rem;
+            background: rgba(0,0,0,0.7);
+            border: 2px solid #8b7355;
+            color: #8b7355;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        select:hover {
+            background: rgba(139, 115, 85, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            #title h1 { font-size: 3rem; }
+            .eye { width: 30px; height: 30px; }
+            #stats { font-size: 0.9rem; min-width: 150px; }
+            #narrative { font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div class="vision-overlay"></div>
+    
+    <div id="ui">
+        <div id="title">
+            <h1>The Watcher's Grove</h1>
+            <div id="gameMode">
+                <button class="menu-button" id="storyModeBtn">Story Mode</button>
+                <button class="menu-button" id="survivalModeBtn">Survival Mode</button>
+                <button class="menu-button" id="zenModeBtn">Zen Mode</button>
+            </div>
+            <div id="difficultySelect">
+                <select id="difficulty">
+                    <option value="novice">Novice Seeker</option>
+                    <option value="adept" selected>Adept Scholar</option>
+                    <option value="master">Master Occultist</option>
+                    <option value="elder">Elder One</option>
+                </select>
+            </div>
+        </div>
+        
+        <div id="stats">
+            <div>
+                <span>Sanity:</span>
+                <div class="stat-bar">
+                    <div class="stat-fill" id="sanityBar" style="width: 100%"></div>
+                </div>
+            </div>
+            <div>
+                <span>Insight:</span>
+                <div class="stat-bar">
+                    <div class="stat-fill" id="insightBar" style="width: 0%"></div>
+                </div>
+            </div>
+            <div>
+                <span>Power:</span>
+                <div class="stat-bar">
+                    <div class="stat-fill" id="powerBar" style="width: 100%"></div>
+                </div>
+            </div>
+            <div>
+                <span>Level:</span>
+                <span id="levelDisplay">1</span>
+            </div>
+            <div>
+                <span>Score:</span>
+                <span id="scoreDisplay">0</span>
+            </div>
+        </div>
+
+        <div id="leaderboard">
+            <h3>High Scores</h3>
+            <ol id="scoreList"></ol>
+        </div>
+        
+        <div id="narrative"></div>
+        
+        <div id="powerUps">
+            <div class="power-up" id="slowTime" title="Slow Time">⏱️</div>
+            <div class="power-up" id="revealOne" title="Reveal One">👁️</div>
+            <div class="power-up" id="skipLevel" title="Skip Level">⏭️</div>
+            <div class="power-up" id="sanityBoost" title="Restore Sanity">💊</div>
+        </div>
+
+        <div id="combo"></div>
+    </div>
+
+    <div id="pauseMenu">
+        <div>
+            <h2>Paused</h2>
+            <p>The eyes wait for your return...</p>
+            <button class="menu-button" id="resumeBtn">Resume</button>
+            <button class="menu-button" id="quitBtn">Quit to Menu</button>
+        </div>
+    </div>
+
+    <div id="endScreen">
+        <div>
+            <h2 id="endTitle">The Eyes Have Seen</h2>
+            <p id="endMessage">Your journey ends here...</p>
+            <p id="finalScore">Final Score: 0</p>
+            <button class="menu-button" id="restartButton">Try Again</button>
+            <button class="menu-button" id="menuButton">Main Menu</button>
+        </div>
+    </div>
+
+    <script>
+        class WatchersGroveEnhanced {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.eyes = [];
+                this.particles = [];
+                this.runes = [];
+                this.sequence = [];
+                this.playerSequence = [];
+                this.level = 1;
+                this.score = 0;
+                this.combo = 0;
+                this.maxCombo = 0;
+                
+                // Stats
+                this.sanity = 100;
+                this.insight = 0;
+                this.power = 100;
+                
+                // Game state
+                this.gameState = 'menu';
+                this.gameMode = 'story';
+                this.difficulty = 'adept';
+                this.isPaused = false;
+                
+                // Power-ups
+                this.powerUps = {
+                    slowTime: { active: false, duration: 0, cooldown: 0 },
+                    revealOne: { uses: 3 },
+                    skipLevel: { uses: 1 },
+                    sanityBoost: { uses: 2 }
+                };
+                
+                // Achievements
+                this.achievements = new Set();
+                this.possibleAchievements = {
+                    firstEye: "First Contact - Clicked your first eye",
+                    perfectLevel: "Perfect Vision - Complete a level without mistakes",
+                    survivor: "Survivor - Reach level 5",
+                    madness: "Embrace Madness - Reach 0 sanity",
+                    speedDemon: "Speed Demon - Complete a sequence in under 3 seconds",
+                    collector: "Eye Collector - Click 100 eyes total",
+                    master: "Master of the Grove - Complete Story Mode",
+                    ancient: "Ancient Knowledge - Reach 100% insight"
+                };
+                
+                // Narratives
+                this.narratives = {
+                    story: [
+                        "You stand before the ancient tree. Its countless eyes watch your every move...",
+                        "The eyes blink in patterns. They speak a language older than words...",
+                        "Each pattern unlocks a fragment of forbidden knowledge...",
+                        "The tree recognizes you. Its gaze grows more intense...",
+                        "Whispers echo through your mind. The truth is near...",
+                        "The final revelation awaits. Will you embrace it?"
+                    ],
+                    survival: [
+                        "The grove hungers. Feed it patterns or be consumed...",
+                        "Time is fleeting. The eyes grow impatient...",
+                        "Your sanity frays, but you must continue...",
+                        "How long can you last in this nightmare?"
+                    ],
+                    zen: [
+                        "Breathe. Focus. The patterns flow like water...",
+                        "There is no rush. Only you and the eternal gaze...",
+                        "Find peace in the watching eyes..."
+                    ]
+                };
+                
+                // Sound frequencies for musical patterns
+                this.soundScale = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25];
+                
+                this.setupCanvas();
+                this.bindEvents();
+                this.createAudioContext();
+                this.loadHighScores();
+                this.createBackgroundEffects();
+                this.animate();
+            }
+
+            setupCanvas() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                
+                window.addEventListener('resize', () => {
+                    this.canvas.width = window.innerWidth;
+                    this.canvas.height = window.innerHeight;
+                });
+            }
+
+            bindEvents() {
+                // Menu buttons
+                document.getElementById('storyModeBtn').addEventListener('click', () => this.startGame('story'));
+                document.getElementById('survivalModeBtn').addEventListener('click', () => this.startGame('survival'));
+                document.getElementById('zenModeBtn').addEventListener('click', () => this.startGame('zen'));
+                
+                // Difficulty
+                document.getElementById('difficulty').addEventListener('change', (e) => {
+                    this.difficulty = e.target.value;
+                });
+                
+                // End screen
+                document.getElementById('restartButton').addEventListener('click', () => this.restartGame());
+                document.getElementById('menuButton').addEventListener('click', () => this.returnToMenu());
+                
+                // Pause
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && this.gameState === 'playing') {
+                        this.togglePause();
+                    }
+                });
+                
+                document.getElementById('resumeBtn').addEventListener('click', () => this.togglePause());
+                document.getElementById('quitBtn').addEventListener('click', () => {
+                    this.togglePause();
+                    this.returnToMenu();
+                });
+                
+                // Power-ups
+                document.getElementById('slowTime').addEventListener('click', () => this.usePowerUp('slowTime'));
+                document.getElementById('revealOne').addEventListener('click', () => this.usePowerUp('revealOne'));
+                document.getElementById('skipLevel').addEventListener('click', () => this.usePowerUp('skipLevel'));
+                document.getElementById('sanityBoost').addEventListener('click', () => this.usePowerUp('sanityBoost'));
+            }
+
+            createAudioContext() {
+                this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                this.masterGain = this.audioCtx.createGain();
+                this.masterGain.connect(this.audioCtx.destination);
+                this.masterGain.gain.value = 0.3;
+            }
+
+            playSound(frequency, duration, type = 'sine') {
+                const oscillator = this.audioCtx.createOscillator();
+                const gainNode = this.audioCtx.createGain();
+                const filter = this.audioCtx.createBiquadFilter();
+                
+                oscillator.connect(filter);
+                filter.connect(gainNode);
+                gainNode.connect(this.masterGain);
+                
+                oscillator.frequency.value = frequency;
+                oscillator.type = type;
+                
+                filter.type = 'lowpass';
+                filter.frequency.value = frequency * 2;
+                
+                const now = this.audioCtx.currentTime;
+                gainNode.gain.setValueAtTime(0, now);
+                gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration);
+                
+                oscillator.start(now);
+                oscillator.stop(now + duration);
+            }
+
+            playAmbientDrone() {
+                if (this.ambientOscillator) return;
+                
+                this.ambientOscillator = this.audioCtx.createOscillator();
+                this.ambientGain = this.audioCtx.createGain();
+                const filter = this.audioCtx.createBiquadFilter();
+                
+                this.ambientOscillator.connect(filter);
+                filter.connect(this.ambientGain);
+                this.ambientGain.connect(this.masterGain);
+                
+                this.ambientOscillator.frequency.value = 55; // Low A
+                this.ambientOscillator.type = 'triangle';
+                
+                filter.type = 'lowpass';
+                filter.frequency.value = 200;
+                
+                this.ambientGain.gain.value = 0.05;
+                
+                this.ambientOscillator.start();
+            }
+
+            stopAmbientDrone() {
+                if (this.ambientOscillator) {
+                    this.ambientOscillator.stop();
+                    this.ambientOscillator = null;
+                }
+            }
+
+            createBackgroundEffects() {
+                // Create floating runes
+                const runeSymbols = ['ᚠ', 'ᚢ', 'ᚦ', 'ᚨ', 'ᚱ', 'ᚲ', 'ᚷ', 'ᚹ'];
+                
+                for (let i = 0; i < 8; i++) {
+                    const rune = document.createElement('div');
+                    rune.className = 'rune';
+                    rune.textContent = runeSymbols[i % runeSymbols.length];
+                    rune.style.left = Math.random() * window.innerWidth + 'px';
+                    rune.style.top = Math.random() * window.innerHeight + 'px';
+                    rune.style.animationDelay = Math.random() * 10 + 's';
+                    rune.style.fontSize = (20 + Math.random() * 20) + 'px';
+                    rune.style.color = '#8b7355';
+                    document.body.appendChild(rune);
+                    this.runes.push(rune);
+                }
+            }
+
+            startGame(mode) {
+                this.gameMode = mode;
+                this.gameState = 'playing';
+                this.level = 1;
+                this.score = 0;
+                this.combo = 0;
+                this.updateScore();
+                
+                // Set initial stats based on mode and difficulty
+                this.initializeStats();
+                
+                document.getElementById('title').style.opacity = '0';
+                document.getElementById('title').style.transform = 'translate(-50%, -50%) scale(0.8)';
+                
+                setTimeout(() => {
+                    document.getElementById('title').style.display = 'none';
+                    document.getElementById('stats').style.opacity = '1';
+                    if (mode !== 'zen') {
+                        document.getElementById('powerUps').style.opacity = '1';
+                    }
+                    this.playAmbientDrone();
+                    this.initLevel();
+                }, 2000);
+            }
+
+            initializeStats() {
+                const difficultySettings = {
+                    novice: { sanity: 100, powerBonus: 2, timeBonus: 1.5 },
+                    adept: { sanity: 100, powerBonus: 1, timeBonus: 1 },
+                    master: { sanity: 80, powerBonus: 0.5, timeBonus: 0.8 },
+                    elder: { sanity: 60, powerBonus: 0.3, timeBonus: 0.6 }
+                };
+                
+                const settings = difficultySettings[this.difficulty];
+                this.sanity = settings.sanity;
+                this.power = 100;
+                this.insight = 0;
+                
+                this.difficultyMultiplier = settings;
+                
+                this.updateStats();
+            }
+
+            initLevel() {
+                this.eyes = [];
+                this.playerSequence = [];
+                
+                // Create eyes in organic patterns
+                const patterns = ['spiral', 'tree', 'circle', 'chaos'];
+                const pattern = patterns[this.level % patterns.length];
+                
+                const numEyes = this.gameMode === 'zen' ? 10 : 15 + Math.floor(this.level * 2.5);
+                this.createEyePattern(pattern, numEyes);
+                
+                // Generate sequence
+                const sequenceLength = this.gameMode === 'zen' ? 4 : Math.min(3 + this.level, 12);
+                this.sequence = [];
+                
+                // Make patterns more musical
+                if (this.gameMode === 'zen') {
+                    // Create harmonic patterns
+                    for (let i = 0; i < sequenceLength; i++) {
+                        this.sequence.push(Math.floor(Math.random() * 8));
+                    }
+                } else {
+                    for (let i = 0; i < sequenceLength; i++) {
+                        this.sequence.push(Math.floor(Math.random() * numEyes));
+                    }
+                }
+
+                // Show narrative
+                const narrativeType = this.narratives[this.gameMode];
+                const narrativeIndex = Math.min(this.level - 1, narrativeType.length - 1);
+                this.showNarrative(narrativeType[narrativeIndex]);
+                
+                // Play sequence after delay
+                const delay = this.gameMode === 'survival' ? 2000 : 3000;
+                setTimeout(() => this.playSequence(), delay);
+            }
+
+            createEyePattern(pattern, numEyes) {
+                const centerX = this.canvas.width / 2;
+                const centerY = this.canvas.height / 2;
+                
+                for (let i = 0; i < numEyes; i++) {
+                    let x, y;
+                    
+                    switch(pattern) {
+                        case 'spiral':
+                            const spiralAngle = (i / numEyes) * Math.PI * 4;
+                            const spiralRadius = 50 + i * 10;
+                            x = centerX + Math.cos(spiralAngle) * spiralRadius;
+                            y = centerY + Math.sin(spiralAngle) * spiralRadius;
+                            break;
+                            
+                        case 'tree':
+                            const level = Math.floor(Math.sqrt(i));
+                            const angleInLevel = (i - level * level) / (2 * level + 1) * Math.PI * 2;
+                            const levelRadius = 80 + level * 60;
+                            x = centerX + Math.cos(angleInLevel) * levelRadius * (0.8 + Math.random() * 0.4);
+                            y = centerY - 100 + level * 80 + Math.sin(angleInLevel) * 40;
+                            break;
+                            
+                        case 'circle':
+                            const circleAngle = (i / numEyes) * Math.PI * 2;
+                            const circleRadius = 150 + (i % 3) * 50;
+                            x = centerX + Math.cos(circleAngle) * circleRadius;
+                            y = centerY + Math.sin(circleAngle) * circleRadius;
+                            break;
+                            
+                        case 'chaos':
+                        default:
+                            const angle = Math.random() * Math.PI * 2;
+                            const radius = 100 + Math.random() * 250;
+                            x = centerX + Math.cos(angle) * radius;
+                            y = centerY + Math.sin(angle) * radius;
+                    }
+                    
+                    const eye = document.createElement('div');
+                    eye.className = 'eye';
+                    
+                    // Special eye types
+                    if (Math.random() < 0.1) {
+                        eye.classList.add('ancient');
+                    } else if (Math.random() < 0.05 && this.gameMode === 'survival') {
+                        eye.classList.add('corrupted');
+                    }
+                    
+                    eye.style.left = x - 20 + 'px';
+                    eye.style.top = y - 20 + 'px';
+                    eye.dataset.index = i;
+                    
+                    eye.addEventListener('click', (e) => this.handleEyeClick(e));
+                    
+                    document.body.appendChild(eye);
+                    this.eyes.push(eye);
+                    
+                    // Stagger appearance
+                    eye.style.opacity = '0';
+                    eye.style.transform = 'scale(0)';
+                    setTimeout(() => {
+                        eye.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+                        eye.style.opacity = '1';
+                        eye.style.transform = 'scale(1)';
+                    }, i * 30);
+                }
+            }
+
+            showNarrative(text) {
+                const narrative = document.getElementById('narrative');
+                narrative.textContent = text;
+                narrative.style.opacity = '1';
+                
+                const duration = this.gameMode === 'survival' ? 2000 : 4000;
+                setTimeout(() => {
+                    narrative.style.opacity = '0';
+                }, duration);
+            }
+
+            playSequence() {
+                if (this.isPaused) return;
+                
+                let index = 0;
+                const timeMultiplier = this.powerUps.slowTime.active ? 2 : 1;
+                const baseDelay = 600 * this.difficultyMultiplier.timeBonus * timeMultiplier;
+                
+                const showNext = () => {
+                    if (index < this.sequence.length && !this.isPaused) {
+                        const eyeIndex = this.sequence[index];
+                        const eye = this.eyes[eyeIndex];
+                        
+                        if (eye) {
+                            eye.classList.add('active');
+                            
+                            // Play musical note
+                            const noteIndex = eyeIndex % this.soundScale.length;
+                            this.playSound(this.soundScale[noteIndex], 0.5);
+                            
+                            setTimeout(() => {
+                                if (eye) eye.classList.remove('active');
+                                index++;
+                                setTimeout(showNext, 300 * timeMultiplier);
+                            }, baseDelay);
+                        }
+                    }
+                };
+                
+                showNext();
+            }
+
+            handleEyeClick(e) {
+                if (this.gameState !== 'playing' || this.isPaused) return;
+                
+                const eye = e.target;
+                const index = parseInt(eye.dataset.index);
+                
+                // First eye achievement
+                if (this.playerSequence.length === 0 && !this.achievements.has('firstEye')) {
+                    this.unlockAchievement('firstEye');
+                }
+                
+                this.playerSequence.push(index);
+                eye.classList.add('active');
+                
+                // Play note
+                const noteIndex = index % this.soundScale.length;
+                this.playSound(this.soundScale[noteIndex] * 1.5, 0.3, 'triangle');
+                
+                // Create enhanced particles
+                const rect = eye.getBoundingClientRect();
+                this.createParticles(rect.left + 20, rect.top + 20, eye.classList.contains('ancient'));
+                
+                setTimeout(() => eye.classList.remove('active'), 300);
+                
+                // Check sequence progress
+                const currentIndex = this.playerSequence.length - 1;
+                if (this.playerSequence[currentIndex] !== this.sequence[currentIndex]) {
+                    this.handleMistake();
+                } else if (this.playerSequence.length === this.sequence.length) {
+                    this.checkSequence();
+                }
+                
+                // Power drain in survival mode
+                if (this.gameMode === 'survival') {
+                    this.power -= 5;
+                    this.updateStats();
+                }
+            }
+
+            handleMistake() {
+                this.combo = 0;
+                this.sanity -= this.gameMode === 'zen' ? 5 : 20;
+                this.updateStats();
+                this.showNarrative("The pattern breaks. Try again...");
+                this.playSound(100, 1, 'sawtooth');
+                
+                // Visual effect
+                this.shakeScreen();
+                
+                if (this.sanity <= 0) {
+                    if (!this.achievements.has('madness')) {
+                        this.unlockAchievement('madness');
+                    }
+                    this.endGame(false);
+                } else {
+                    this.playerSequence = [];
+                    setTimeout(() => this.playSequence(), 2000);
+                }
+            }
+
+            createParticles(x, y, special = false) {
+                const particleCount = special ? 20 : 10;
+                
+                for (let i = 0; i < particleCount; i++) {
+                    const particle = document.createElement('div');
+                    particle.className = 'particle';
+                    
+                    const angle = (Math.PI * 2 / particleCount) * i;
+                    const velocity = 2 + Math.random() * 3;
+                    
+                    particle.style.left = x + 'px';
+                    particle.style.top = y + 'px';
+                    particle.style.background = special ? '#4a7c7e' : '#8b7355';
+                    particle.style.boxShadow = `0 0 6px ${special ? '#4a7c7e' : '#8b7355'}`;
+                    
+                    document.body.appendChild(particle);
+                    
+                    let posX = x;
+                    let posY = y;
+                    let opacity = 1;
+                    
+                    const animateParticle = () => {
+                        posX += Math.cos(angle) * velocity;
+                        posY += Math.sin(angle) * velocity + 1;
+                        opacity -= 0.02;
+                        
+                        particle.style.left = posX + 'px';
+                        particle.style.top = posY + 'px';
+                        particle.style.opacity = opacity;
+                        
+                        if (opacity > 0) {
+                            requestAnimationFrame(animateParticle);
+                        } else {
+                            particle.remove();
+                        }
+                    };
+                    
+                    requestAnimationFrame(animateParticle);
+                }
+            }
+
+            checkSequence() {
+                const startTime = performance.now() - (this.sequence.length * 900);
+                const completionTime = performance.now() - startTime;
+                
+                this.combo++;
+                if (this.combo > this.maxCombo) this.maxCombo = this.combo;
+                
+                // Calculate score
+                let points = 100 * this.level * (this.combo + 1);
+                if (this.difficulty === 'master') points *= 1.5;
+                if (this.difficulty === 'elder') points *= 2;
+                
+                this.score += Math.floor(points);
+                this.updateScore();
+                
+                // Show combo
+                if (this.combo > 1) {
+                    this.showCombo();
+                }
+                
+                // Gain insight
+                this.insight += 10 + this.level * 2;
+                if (this.insight >= 100 && !this.achievements.has('ancient')) {
+                    this.unlockAchievement('ancient');
+                }
+                this.updateStats();
+                
+                // Show floating score
+                this.showFloatingText(`+${Math.floor(points)}`, this.canvas.width / 2, this.canvas.height / 2);
+                
+                // Perfect level achievement
+                if (this.combo === this.level && !this.achievements.has('perfectLevel')) {
+                    this.unlockAchievement('perfectLevel');
+                }
+                
+                // Speed demon achievement
+                if (completionTime < 3000 && this.sequence.length >= 5 && !this.achievements.has('speedDemon')) {
+                    this.unlockAchievement('speedDemon');
+                }
+                
+                this.level++;
+                
+                // Level 5 achievement
+                if (this.level === 5 && !this.achievements.has('survivor')) {
+                    this.unlockAchievement('survivor');
+                }
+                
+                this.showNarrative("The pattern is accepted. Deeper into the mystery...");
+                this.playSound(500, 1, 'sine');
+                
+                // Victory fanfare
+                setTimeout(() => this.playSound(600, 0.2), 100);
+                setTimeout(() => this.playSound(800, 0.2), 200);
+                
+                setTimeout(() => {
+                    this.clearEyes();
+                    
+                    if (this.gameMode === 'story' && this.level > 6) {
+                        if (!this.achievements.has('master')) {
+                            this.unlockAchievement('master');
+                        }
+                        this.endGame(true);
+                    } else if (this.gameMode === 'survival' && this.power <= 0) {
+                        this.endGame(false);
+                    } else {
+                        this.initLevel();
+                    }
+                }, 2000);
+            }
+
+            showCombo() {
+                const combo = document.getElementById('combo');
+                combo.textContent = `${this.combo}x COMBO!`;
+                combo.className = 'combo-animation';
+                
+                setTimeout(() => {
+                    combo.className = '';
+                }, 1000);
+            }
+
+            showFloatingText(text, x, y) {
+                const floatingText = document.createElement('div');
+                floatingText.className = 'floating-text';
+                floatingText.textContent = text;
+                floatingText.style.left = x + 'px';
+                floatingText.style.top = y + 'px';
+                
+                document.body.appendChild(floatingText);
+                
+                setTimeout(() => floatingText.remove(), 2000);
+            }
+
+            shakeScreen() {
+                const intensity = 10;
+                const duration = 500;
+                const startTime = Date.now();
+                
+                const shake = () => {
+                    const elapsed = Date.now() - startTime;
+                    if (elapsed < duration) {
+                        const x = (Math.random() - 0.5) * intensity;
+                        const y = (Math.random() - 0.5) * intensity;
+                        this.canvas.style.transform = `translate(${x}px, ${y}px)`;
+                        requestAnimationFrame(shake);
+                    } else {
+                        this.canvas.style.transform = '';
+                    }
+                };
+                
+                shake();
+            }
+
+            updateStats() {
+                document.getElementById('sanityBar').style.width = `${Math.max(0, this.sanity)}%`;
+                document.getElementById('insightBar').style.width = `${Math.min(100, this.insight)}%`;
+                document.getElementById('powerBar').style.width = `${Math.max(0, this.power)}%`;
+                document.getElementById('levelDisplay').textContent = this.level;
+                
+                // Update vision overlay based on sanity
+                const overlay = document.querySelector('.vision-overlay');
+                if (this.sanity < 50) {
+                    overlay.classList.add('madness-effect');
+                    overlay.style.opacity = (50 - this.sanity) / 50;
+                } else {
+                    overlay.classList.remove('madness-effect');
+                    overlay.style.opacity = 0;
+                }
+                
+                // Update power-up availability
+                this.updatePowerUpUI();
+            }
+
+            updateScore() {
+                document.getElementById('scoreDisplay').textContent = this.score.toLocaleString();
+            }
+
+            updatePowerUpUI() {
+                // Slow Time
+                const slowTimeBtn = document.getElementById('slowTime');
+                if (this.powerUps.slowTime.cooldown > 0 || this.power < 20) {
+                    slowTimeBtn.classList.add('disabled');
+                } else {
+                    slowTimeBtn.classList.remove('disabled');
+                }
+                
+                // Reveal One
+                const revealBtn = document.getElementById('revealOne');
+                revealBtn.textContent = `👁️ (${this.powerUps.revealOne.uses})`;
+                if (this.powerUps.revealOne.uses <= 0) {
+                    revealBtn.classList.add('disabled');
+                } else {
+                    revealBtn.classList.remove('disabled');
+                }
+                
+                // Skip Level
+                const skipBtn = document.getElementById('skipLevel');
+                skipBtn.textContent = `⏭️ (${this.powerUps.skipLevel.uses})`;
+                if (this.powerUps.skipLevel.uses <= 0) {
+                    skipBtn.classList.add('disabled');
+                } else {
+                    skipBtn.classList.remove('disabled');
+                }
+                
+                // Sanity Boost
+                const sanityBtn = document.getElementById('sanityBoost');
+                sanityBtn.textContent = `💊 (${this.powerUps.sanityBoost.uses})`;
+                if (this.powerUps.sanityBoost.uses <= 0 || this.sanity >= 100) {
+                    sanityBtn.classList.add('disabled');
+                } else {
+                    sanityBtn.classList.remove('disabled');
+                }
+            }
+
+            usePowerUp(type) {
+                if (this.gameState !== 'playing' || this.isPaused) return;
+                
+                switch(type) {
+                    case 'slowTime':
+                        if (this.power >= 20 && this.powerUps.slowTime.cooldown <= 0) {
+                            this.power -= 20;
+                            this.powerUps.slowTime.active = true;
+                            this.powerUps.slowTime.duration = 5000;
+                            this.powerUps.slowTime.cooldown = 10000;
+                            document.getElementById('slowTime').classList.add('active');
+                            this.playSound(200, 0.5, 'triangle');
+                            
+                            setTimeout(() => {
+                                this.powerUps.slowTime.active = false;
+                                document.getElementById('slowTime').classList.remove('active');
+                            }, 5000);
+                        }
+                        break;
+                        
+                    case 'revealOne':
+                        if (this.powerUps.revealOne.uses > 0 && this.playerSequence.length < this.sequence.length) {
+                            this.powerUps.revealOne.uses--;
+                            const nextIndex = this.playerSequence.length;
+                            const nextEye = this.eyes[this.sequence[nextIndex]];
+                            if (nextEye) {
+                                nextEye.classList.add('active');
+                                setTimeout(() => nextEye.classList.remove('active'), 1000);
+                            }
+                            this.playSound(600, 0.3);
+                        }
+                        break;
+                        
+                    case 'skipLevel':
+                        if (this.powerUps.skipLevel.uses > 0) {
+                            this.powerUps.skipLevel.uses--;
+                            this.combo = 0;
+                            this.level++;
+                            this.score += 50 * this.level;
+                            this.updateScore();
+                            this.clearEyes();
+                            this.showNarrative("The tree grants passage...");
+                            this.playSound(400, 0.5);
+                            setTimeout(() => this.initLevel(), 1500);
+                        }
+                        break;
+                        
+                    case 'sanityBoost':
+                        if (this.powerUps.sanityBoost.uses > 0 && this.sanity < 100) {
+                            this.powerUps.sanityBoost.uses--;
+                            this.sanity = Math.min(100, this.sanity + 30);
+                            this.updateStats();
+                            this.showNarrative("Your mind clears... temporarily.");
+                            this.playSound(800, 0.5, 'sine');
+                            this.createHealingEffect();
+                        }
+                        break;
+                }
+                
+                this.updateStats();
+            }
+
+            createHealingEffect() {
+                const overlay = document.createElement('div');
+                overlay.style.position = 'fixed';
+                overlay.style.top = '0';
+                overlay.style.left = '0';
+                overlay.style.width = '100%';
+                overlay.style.height = '100%';
+                overlay.style.background = 'radial-gradient(circle, rgba(139, 195, 74, 0.3) 0%, transparent 70%)';
+                overlay.style.pointerEvents = 'none';
+                overlay.style.zIndex = '15';
+                overlay.style.opacity = '0';
+                overlay.style.transition = 'opacity 0.5s';
+                
+                document.body.appendChild(overlay);
+                
+                setTimeout(() => overlay.style.opacity = '1', 10);
+                setTimeout(() => overlay.style.opacity = '0', 500);
+                setTimeout(() => overlay.remove(), 1000);
+            }
+
+            unlockAchievement(id) {
+                if (this.achievements.has(id)) return;
+                
+                this.achievements.add(id);
+                const achievement = this.possibleAchievements[id];
+                
+                const achievementDiv = document.createElement('div');
+                achievementDiv.className = 'achievement';
+                achievementDiv.innerHTML = `
+                    <h3>Achievement Unlocked!</h3>
+                    <p>${achievement}</p>
+                `;
+                
+                document.body.appendChild(achievementDiv);
+                
+                setTimeout(() => achievementDiv.classList.add('show'), 100);
+                setTimeout(() => achievementDiv.classList.remove('show'), 3000);
+                setTimeout(() => achievementDiv.remove(), 3500);
+                
+                this.playSound(1000, 0.5, 'sine');
+                setTimeout(() => this.playSound(1200, 0.5, 'sine'), 100);
+                
+                // Bonus score
+                this.score += 500;
+                this.updateScore();
+            }
+
+            togglePause() {
+                if (this.gameState !== 'playing') return;
+                
+                this.isPaused = !this.isPaused;
+                const pauseMenu = document.getElementById('pauseMenu');
+                
+                if (this.isPaused) {
+                    pauseMenu.style.display = 'flex';
+                } else {
+                    pauseMenu.style.display = 'none';
+                }
+            }
+
+            clearEyes() {
+                this.eyes.forEach((eye, index) => {
+                    setTimeout(() => {
+                        eye.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+                        eye.style.opacity = '0';
+                        eye.style.transform = 'scale(0) rotate(180deg)';
+                        setTimeout(() => eye.remove(), 500);
+                    }, index * 20);
+                });
+                this.eyes = [];
+            }
+
+            endGame(won) {
+                this.gameState = 'ended';
+                this.clearEyes();
+                this.stopAmbientDrone();
+                
+                // Save high score
+                this.saveHighScore();
+                
+                const endScreen = document.getElementById('endScreen');
+                const endTitle = document.getElementById('endTitle');
+                const endMessage = document.getElementById('endMessage');
+                const finalScore = document.getElementById('finalScore');
+                
+                if (won) {
+                    endTitle.textContent = "The Grove Accepts You";
+                    endMessage.textContent = `You have mastered the ancient patterns. The tree's wisdom is yours.`;
+                } else if (this.sanity <= 0) {
+                    endTitle.textContent = "Madness Takes Hold";
+                    endMessage.textContent = "The countless eyes have shattered your mind...";
+                } else {
+                    endTitle.textContent = "Power Depleted";
+                    endMessage.textContent = "Without power, the grove consumes you...";
+                }
+                
+                finalScore.textContent = `Final Score: ${this.score.toLocaleString()} | Max Combo: ${this.maxCombo}x`;
+                
+                endScreen.style.display = 'flex';
+                
+                // Count total eyes clicked
+                const totalEyes = this.achievements.size * 10 + this.level * 5;
+                if (totalEyes >= 100 && !this.achievements.has('collector')) {
+                    this.unlockAchievement('collector');
+                }
+            }
+
+            saveHighScore() {
+                const highScores = JSON.parse(localStorage.getItem('watchersGroveScores') || '[]');
+                
+                highScores.push({
+                    score: this.score,
+                    level: this.level,
+                    mode: this.gameMode,
+                    difficulty: this.difficulty,
+                    date: new Date().toISOString()
+                });
+                
+                highScores.sort((a, b) => b.score - a.score);
+                highScores.splice(10); // Keep top 10
+                
+                localStorage.setItem('watchersGroveScores', JSON.stringify(highScores));
+            }
+
+            loadHighScores() {
+                const highScores = JSON.parse(localStorage.getItem('watchersGroveScores') || '[]');
+                const scoreList = document.getElementById('scoreList');
+                
+                scoreList.innerHTML = highScores.slice(0, 5).map((score, index) => `
+                    <li>
+                        <span>${index + 1}. ${score.mode.toUpperCase()}</span>
+                        <span>${score.score.toLocaleString()}</span>
+                    </li>
+                `).join('');
+            }
+
+            restartGame() {
+                // Reset everything
+                this.level = 1;
+                this.score = 0;
+                this.combo = 0;
+                this.sequence = [];
+                this.playerSequence = [];
+                this.particles = [];
+                
+                // Reset power-ups
+                this.powerUps = {
+                    slowTime: { active: false, duration: 0, cooldown: 0 },
+                    revealOne: { uses: 3 },
+                    skipLevel: { uses: 1 },
+                    sanityBoost: { uses: 2 }
+                };
+                
+                document.getElementById('endScreen').style.display = 'none';
+                this.startGame(this.gameMode);
+            }
+
+            returnToMenu() {
+                this.gameState = 'menu';
+                this.clearEyes();
+                this.stopAmbientDrone();
+                
+                // Clear runes
+                this.runes.forEach(rune => rune.remove());
+                this.runes = [];
+                
+                // Reset UI
+                document.getElementById('endScreen').style.display = 'none';
+                document.getElementById('pauseMenu').style.display = 'none';
+                document.getElementById('stats').style.opacity = '0';
+                document.getElementById('powerUps').style.opacity = '0';
+                document.getElementById('title').style.display = 'block';
+                
+                setTimeout(() => {
+                    document.getElementById('title').style.opacity = '1';
+                    document.getElementById('title').style.transform = 'translate(-50%, -50%) scale(1)';
+                }, 100);
+                
+                // Recreate background effects
+                this.createBackgroundEffects();
+                
+                // Update leaderboard
+                this.loadHighScores();
+                if (this.score > 0) {
+                    document.getElementById('leaderboard').style.display = 'block';
+                    setTimeout(() => {
+                        document.getElementById('leaderboard').style.display = 'none';
+                    }, 5000);
+                }
+            }
+
+            drawBackground() {
+                // Create living, breathing background
+                const time = Date.now() * 0.0001;
+                
+                // Dark gradient with subtle animation
+                const gradient = this.ctx.createRadialGradient(
+                    this.canvas.width / 2 + Math.sin(time) * 20,
+                    this.canvas.height / 2 + Math.cos(time) * 20,
+                    0,
+                    this.canvas.width / 2,
+                    this.canvas.height / 2,
+                    this.canvas.width
+                );
+                
+                const darkness = this.sanity ? (100 - this.sanity) / 200 : 0;
+                gradient.addColorStop(0, `rgba(26, 21, 16, ${0.8 + darkness})`);
+                gradient.addColorStop(0.5, `rgba(15, 12, 9, ${0.9 + darkness})`);
+                gradient.addColorStop(1, '#050505');
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw organic tree structure
+                this.ctx.save();
+                this.ctx.globalAlpha = 0.8;
+                this.drawOrganicTree(time);
+                this.ctx.restore();
+                
+                // Add atmospheric fog
+                this.drawFog(time);
+            }
+
+            drawOrganicTree(time) {
+                const centerX = this.canvas.width / 2;
+                const baseY = this.canvas.height;
+                
+                // Main trunk with organic curves
+                this.ctx.fillStyle = '#0a0805';
+                this.ctx.beginPath();
+                
+                const trunkWidth = 100 + Math.sin(time * 2) * 5;
+                const curves = 8;
+                
+                for (let i = 0; i <= curves; i++) {
+                    const y = baseY - (i / curves) * (this.canvas.height * 0.6);
+                    const offsetX = Math.sin(i * 0.5 + time) * 20;
+                    const width = trunkWidth * (1 - i / curves / 2);
+                    
+                    if (i === 0) {
+                        this.ctx.moveTo(centerX - width + offsetX, y);
+                    } else {
+                        this.ctx.quadraticCurveTo(
+                            centerX - width + offsetX,
+                            y + 20,
+                            centerX - width + offsetX,
+                            y
+                        );
+                    }
+                }
+                
+                // Right side of trunk
+                for (let i = curves; i >= 0; i--) {
+                    const y = baseY - (i / curves) * (this.canvas.height * 0.6);
+                    const offsetX = Math.sin(i * 0.5 + time) * 20;
+                    const width = trunkWidth * (1 - i / curves / 2);
+                    
+                    this.ctx.quadraticCurveTo(
+                        centerX + width + offsetX,
+                        y + 20,
+                        centerX + width + offsetX,
+                        y
+                    );
+                }
+                
+                this.ctx.closePath();
+                this.ctx.fill();
+                
+                // Draw writhing branches
+                const branchCount = 7;
+                for (let i = 0; i < branchCount; i++) {
+                    const startY = this.canvas.height * (0.3 + i * 0.08);
+                    const angle = (i - branchCount / 2) * 0.4 + Math.sin(time + i) * 0.1;
+                    this.drawOrganicBranch(
+                        centerX + Math.sin(i * 0.5 + time) * 20,
+                        startY,
+                        angle,
+                        100 + i * 20,
+                        20 - i * 2,
+                        time + i
+                    );
+                }
+            }
+
+            drawOrganicBranch(x, y, angle, length, width, timeOffset) {
+                if (length < 20 || width < 2) return;
+                
+                const segments = 5;
+                
+                this.ctx.strokeStyle = '#0a0805';
+                this.ctx.lineWidth = width;
+                this.ctx.lineCap = 'round';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x, y);
+                
+                let currentX = x;
+                let currentY = y;
+                let currentAngle = angle;
+                
+                for (let i = 1; i <= segments; i++) {
+                    const segmentLength = length / segments;
+                    const wiggle = Math.sin(timeOffset * 3 + i) * 0.1;
+                    currentAngle += wiggle;
+                    
+                    const endX = currentX + Math.cos(currentAngle) * segmentLength;
+                    const endY = currentY + Math.sin(currentAngle) * segmentLength;
+                    
+                    this.ctx.quadraticCurveTo(
+                        currentX + Math.cos(currentAngle - Math.PI / 2) * width / 2,
+                        currentY + Math.sin(currentAngle - Math.PI / 2) * width / 2,
+                        endX,
+                        endY
+                    );
+                    
+                    currentX = endX;
+                    currentY = endY;
+                }
+                
+                this.ctx.stroke();
+                
+                // Recursive smaller branches
+                if (Math.random() > 0.3) {
+                    this.drawOrganicBranch(
+                        currentX,
+                        currentY,
+                        currentAngle - 0.5 + Math.random() * 0.3,
+                        length * 0.7,
+                        width * 0.7,
+                        timeOffset + 1
+                    );
+                }
+                
+                if (Math.random() > 0.3) {
+                    this.drawOrganicBranch(
+                        currentX,
+                        currentY,
+                        currentAngle + 0.5 - Math.random() * 0.3,
+                        length * 0.7,
+                        width * 0.7,
+                        timeOffset - 1
+                    );
+                }
+            }
+
+            drawFog(time) {
+                this.ctx.save();
+                this.ctx.globalAlpha = 0.1;
+                
+                for (let i = 0; i < 3; i++) {
+                    const offset = i * 1000;
+                    const x = Math.sin(time + offset) * 100 + this.canvas.width / 2;
+                    const y = Math.cos(time * 0.7 + offset) * 50 + this.canvas.height / 2;
+                    
+                    const gradient = this.ctx.createRadialGradient(x, y, 0, x, y, 300);
+                    gradient.addColorStop(0, 'rgba(139, 115, 85, 0.2)');
+                    gradient.addColorStop(1, 'transparent');
+                    
+                    this.ctx.fillStyle = gradient;
+                    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                }
+                
+                this.ctx.restore();
+            }
+
+            updatePowerUpCooldowns() {
+                // Update slow time cooldown
+                if (this.powerUps.slowTime.cooldown > 0) {
+                    this.powerUps.slowTime.cooldown -= 16; // ~60fps
+                    if (this.powerUps.slowTime.cooldown <= 0) {
+                        this.updatePowerUpUI();
+                    }
+                }
+                
+                // Regenerate power slowly
+                if (this.gameState === 'playing' && this.power < 100) {
+                    this.power += 0.05;
+                    this.updateStats();
+                }
+            }
+
+            animate() {
+                this.drawBackground();
+                this.updatePowerUpCooldowns();
+                
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+
+        // Initialize enhanced game when page loads
+        window.addEventListener('load', () => {
+            new WatchersGroveEnhanced();
+        });
+    </script>
+</body>
+</html>

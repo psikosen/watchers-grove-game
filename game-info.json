@@ -1,0 +1,18 @@
+{
+  "name": "The Watcher's Grove",
+  "version": "1.0.0",
+  "description": "A mysterious horror-puzzle game about an ancient tree with watching eyes",
+  "author": "Created with AI assistance",
+  "genre": "Horror/Puzzle",
+  "platform": "Web Browser",
+  "requirements": {
+    "browser": "Modern web browser with JavaScript enabled",
+    "audio": "Speakers or headphones recommended for full experience"
+  },
+  "gameInfo": {
+    "levels": 6,
+    "estimatedPlayTime": "15-30 minutes",
+    "difficulty": "Progressive (Easy to Hard)",
+    "replayability": "High - patterns change each playthrough"
+  }
+}
