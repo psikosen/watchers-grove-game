@@ -1,0 +1,94 @@
+/* Menu Styles */
+.menu {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    background: rgba(26, 21, 16, 0.95);
+    border: 2px solid #8b7355;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 0 30px rgba(139, 115, 85, 0.5), inset 0 0 20px rgba(0, 0, 0, 0.5);
+    z-index: 15;
+    max-width: 500px;
+    backdrop-filter: blur(10px);
+}
+
+.menu h1 {
+    font-size: 3em;
+    color: #d4af37;
+    text-shadow: 0 0 20px #d4af37;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+.menu h2 {
+    font-size: 2em;
+    color: #d4af37;
+    text-shadow: 0 0 15px #d4af37;
+    margin-bottom: 20px;
+}
+
+.tagline {
+    font-style: italic;
+    color: #8b7355;
+    margin-bottom: 30px;
+    font-size: 1.1em;
+}
+
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.menu button {
+    padding: 15px 30px;
+    background: linear-gradient(45deg, #2a1f16, #3d2d1f);
+    border: 2px solid #8b7355;
+    color: #d4af37;
+    font-family: inherit;
+    font-size: 1.1em;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.menu button:hover {
+    background: linear-gradient(45deg, #3d2d1f, #4a3426);
+    border-color: #d4af37;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+    transform: translateY(-2px);
+}
+
+.menu button:active {
+    transform: translateY(0);
+}
+
+/* Difficulty and Season Selectors */
+.difficulty-selector, .season-selector {
+    margin: 15px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.difficulty-selector label, .season-selector label {
+    color: #8b7355;
+    font-weight: bold;
+}
+
+.difficulty-selector select, .season-selector select {
+    background: #2a1f16;
+    border: 1px solid #8b7355;
+    color: #d4af37;
+    padding: 8px 15px;
+    border-radius: 5px;
+    font-family: inherit;
+    cursor: pointer;
+}

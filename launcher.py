@@ -1,277 +1,323 @@
 #!/usr/bin/env python3
 """
-The Watcher's Grove - Advanced Launcher
-Launch the game with various options and configurations
+The Watcher's Grove - Master Launcher
+Provides a graphical interface to launch the game with various options
 """
 
-import os
-import sys
-import json
+import tkinter as tk
+from tkinter import ttk, messagebox
 import webbrowser
-import http.server
-import socketserver
-import threading
+import os
+import json
+import subprocess
 from datetime import datetime
 
-class GameLauncher:
-    def __init__(self):
-        self.game_dir = os.path.dirname(os.path.abspath(__file__))
-        self.game_file = os.path.join(self.game_dir, 'index.html')
-        self.config_file = os.path.join(self.game_dir, 'game_config.json')
-        self.stats_file = os.path.join(self.game_dir, 'game_stats.json')
+class WatchersGroveLauncher:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("The Watcher's Grove - Launcher")
+        self.root.geometry("600x500")
+        self.root.configure(bg='#0a0a0a')
         
-    def load_config(self):
-        """Load game configuration"""
-        if os.path.exists(self.config_file):
-            with open(self.config_file, 'r') as f:
-                return json.load(f)
-        return self.create_default_config()
-    
-    def create_default_config(self):
-        """Create default configuration"""
-        config = {
-            "sound_enabled": True,
-            "default_difficulty": "adept",
-            "default_season": "default",
-            "fullscreen": False,
-            "particle_quality": "high",
-            "show_tutorial": True,
-            "auto_save": True
-        }
-        with open(self.config_file, 'w') as f:
-            json.dump(config, f, indent=4)
-        return config
-    
-    def load_stats(self):
-        """Load game statistics"""
-        if os.path.exists(self.stats_file):
-            with open(self.stats_file, 'r') as f:
-                return json.load(f)
-        return {
-            "total_plays": 0,
-            "total_time": 0,
-            "favorite_mode": "story",
-            "highest_score": 0,
-            "total_eyes_clicked": 0
-        }
-    
-    def save_stats(self, stats):
-        """Save game statistics"""
-        with open(self.stats_file, 'w') as f:
-            json.dump(stats, f, indent=4)
-    
-    def start_local_server(self, port=8080):
-        """Start a local web server for better performance"""
-        os.chdir(self.game_dir)
-        handler = http.server.SimpleHTTPRequestHandler
+        # Style configuration
+        self.style = ttk.Style()
+        self.style.theme_use('clam')
+        self.configure_styles()
         
-        with socketserver.TCPServer(("", port), handler) as httpd:
-            print(f"🌐 Local server started at http://localhost:{port}")
-            print("📁 Serving from:", self.game_dir)
-            print("🎮 Opening game in browser...")
+        # Create UI
+        self.create_widgets()
+        
+        # Load settings
+        self.load_settings()
+        
+    def configure_styles(self):
+        # Configure dark theme
+        self.style.configure('Title.TLabel', 
+                           background='#0a0a0a', 
+                           foreground='#8b7355',
+                           font=('Arial', 24, 'bold'))
+        
+        self.style.configure('Subtitle.TLabel',
+                           background='#0a0a0a',
+                           foreground='#b8a590',
+                           font=('Arial', 12))
+        
+        self.style.configure('Game.TButton',
+                           background='#8b7355',
+                           foreground='#0a0a0a',
+                           font=('Arial', 14, 'bold'),
+                           borderwidth=0,
+                           focuscolor='none')
+        
+        self.style.map('Game.TButton',
+                      background=[('active', '#d4a574')],
+                      foreground=[('active', '#0a0a0a')])
+        
+        self.style.configure('Option.TButton',
+                           background='#1a1510',
+                           foreground='#8b7355',
+                           font=('Arial', 10),
+                           borderwidth=1,
+                           relief='solid')
+        
+    def create_widgets(self):
+        # Title
+        title_frame = tk.Frame(self.root, bg='#0a0a0a')
+        title_frame.pack(pady=20)
+        
+        title = ttk.Label(title_frame, text="The Watcher's Grove", style='Title.TLabel')
+        title.pack()
+        
+        subtitle = ttk.Label(title_frame, text="Ultimate Edition v3.0", style='Subtitle.TLabel')
+        subtitle.pack()
+        
+        # Main buttons frame
+        main_frame = tk.Frame(self.root, bg='#0a0a0a')
+        main_frame.pack(expand=True, fill='both', padx=50, pady=20)
+        
+        # Play button
+        play_btn = ttk.Button(main_frame, text="🎮 PLAY GAME", 
+                             command=self.launch_game,
+                             style='Game.TButton')
+        play_btn.pack(fill='x', pady=10, ipady=15)
+        
+        # Quick launch options
+        quick_frame = tk.Frame(main_frame, bg='#0a0a0a')
+        quick_frame.pack(fill='x', pady=20)
+        
+        tk.Label(quick_frame, text="Quick Launch:", 
+                bg='#0a0a0a', fg='#b8a590', 
+                font=('Arial', 12)).pack(anchor='w')
+        
+        modes = [
+            ("📖 Story Mode", "story"),
+            ("💀 Survival Mode", "survival"),
+            ("🧘 Zen Mode", "zen"),
+            ("👹 Boss Rush", "boss")
+        ]
+        
+        for text, mode in modes:
+            btn = ttk.Button(quick_frame, text=text,
+                           command=lambda m=mode: self.launch_with_mode(m),
+                           style='Option.TButton')
+            btn.pack(side='left', padx=5, pady=5)
+        
+        # Tools section
+        tools_frame = tk.Frame(main_frame, bg='#0a0a0a')
+        tools_frame.pack(fill='x', pady=20)
+        
+        tk.Label(tools_frame, text="Tools & Extras:", 
+                bg='#0a0a0a', fg='#b8a590',
+                font=('Arial', 12)).pack(anchor='w')
+        
+        tools = [
+            ("📊 Statistics", self.open_stats),
+            ("📚 Guide", self.open_guide),
+            ("🛠️ Level Editor", self.open_editor),
+            ("⚙️ Settings", self.open_settings)
+        ]
+        
+        tools_grid = tk.Frame(tools_frame, bg='#0a0a0a')
+        tools_grid.pack(fill='x')
+        
+        for i, (text, command) in enumerate(tools):
+            btn = ttk.Button(tools_grid, text=text,
+                           command=command,
+                           style='Option.TButton')
+            btn.grid(row=i//2, column=i%2, padx=5, pady=5, sticky='ew')
+        
+        tools_grid.columnconfigure(0, weight=1)
+        tools_grid.columnconfigure(1, weight=1)
+        
+        # Options
+        options_frame = tk.Frame(main_frame, bg='#0a0a0a')
+        options_frame.pack(fill='x', pady=10)
+        
+        self.sound_var = tk.BooleanVar(value=True)
+        sound_check = tk.Checkbutton(options_frame, text="🔊 Enable Sound",
+                                    variable=self.sound_var,
+                                    bg='#0a0a0a', fg='#b8a590',
+                                    selectcolor='#0a0a0a',
+                                    font=('Arial', 10))
+        sound_check.pack(side='left', padx=10)
+        
+        self.fullscreen_var = tk.BooleanVar(value=False)
+        fullscreen_check = tk.Checkbutton(options_frame, text="🖥️ Fullscreen",
+                                         variable=self.fullscreen_var,
+                                         bg='#0a0a0a', fg='#b8a590',
+                                         selectcolor='#0a0a0a',
+                                         font=('Arial', 10))
+        fullscreen_check.pack(side='left', padx=10)
+        
+        # Status bar
+        status_frame = tk.Frame(self.root, bg='#1a1510', height=30)
+        status_frame.pack(fill='x', side='bottom')
+        
+        self.status_label = tk.Label(status_frame, 
+                                   text="Ready to enter the grove...",
+                                   bg='#1a1510', fg='#8b7355',
+                                   font=('Arial', 9))
+        self.status_label.pack(side='left', padx=10)
+        
+        # Version info
+        version_label = tk.Label(status_frame,
+                               text="v3.0 Ultimate | © 2024",
+                               bg='#1a1510', fg='#666',
+                               font=('Arial', 8))
+        version_label.pack(side='right', padx=10)
+        
+    def launch_game(self):
+        self.update_status("Launching The Watcher's Grove...")
+        url = "file://" + os.path.abspath("index.html")
+        
+        # Add parameters
+        params = []
+        if not self.sound_var.get():
+            params.append("mute=1")
+        if self.fullscreen_var.get():
+            params.append("fullscreen=1")
+        
+        if params:
+            url += "?" + "&".join(params)
+        
+        webbrowser.open(url)
+        self.save_launch_stats()
+        self.update_status("Game launched! The grove awaits...")
+        
+    def launch_with_mode(self, mode):
+        self.update_status(f"Launching {mode} mode...")
+        url = f"file://{os.path.abspath('index.html')}?mode={mode}"
+        
+        if not self.sound_var.get():
+            url += "&mute=1"
             
-            # Open browser after server starts
-            webbrowser.open(f'http://localhost:{port}/index.html')
-            
-            try:
-                httpd.serve_forever()
-            except KeyboardInterrupt:
-                print("\n👋 Shutting down server...")
-                httpd.shutdown()
-    
-    def launch_direct(self):
-        """Launch game directly in browser"""
-        print("🎮 Launching The Watcher's Grove...")
-        webbrowser.open(f'file://{self.game_file}')
-    
-    def show_menu(self):
-        """Display launch menu"""
-        print("""
-╔══════════════════════════════════════════╗
-║       THE WATCHER'S GROVE LAUNCHER       ║
-║           Ultimate Edition               ║
-╚══════════════════════════════════════════╝
-
-1. 🎮 Quick Play (Direct Launch)
-2. 🌐 Play with Local Server (Recommended)
-3. 📊 View Statistics
-4. ⚙️  Configure Game
-5. 🏆 View Achievements
-6. 📖 Read Guide
-7. 🔧 Developer Mode
-8. ❌ Exit
-
-""")
+        webbrowser.open(url)
+        self.save_launch_stats(mode)
         
-    def view_statistics(self):
-        """Display game statistics"""
-        stats = self.load_stats()
-        print("\n📊 GAME STATISTICS")
-        print("=" * 40)
-        print(f"Total Plays: {stats['total_plays']}")
-        print(f"Total Time: {stats['total_time']} minutes")
-        print(f"Favorite Mode: {stats['favorite_mode']}")
-        print(f"Highest Score: {stats['highest_score']:,}")
-        print(f"Total Eyes Clicked: {stats['total_eyes_clicked']:,}")
-        print("=" * 40)
-        input("\nPress Enter to continue...")
-    
-    def configure_game(self):
-        """Configure game settings"""
-        config = self.load_config()
+    def open_stats(self):
+        self.update_status("Opening statistics dashboard...")
+        webbrowser.open(f"file://{os.path.abspath('stats-dashboard.html')}")
         
-        print("\n⚙️ GAME CONFIGURATION")
-        print("=" * 40)
-        print("1. Sound:", "Enabled" if config['sound_enabled'] else "Disabled")
-        print("2. Default Difficulty:", config['default_difficulty'])
-        print("3. Default Season:", config['default_season'])
-        print("4. Fullscreen:", "Yes" if config['fullscreen'] else "No")
-        print("5. Particle Quality:", config['particle_quality'])
-        print("6. Show Tutorial:", "Yes" if config['show_tutorial'] else "No")
-        print("7. Auto Save:", "Yes" if config['auto_save'] else "No")
-        print("8. Save and Return")
-        print("=" * 40)
+    def open_guide(self):
+        self.update_status("Opening game guide...")
+        webbrowser.open(f"file://{os.path.abspath('quick-start.html')}")
         
-        choice = input("\nSelect option to toggle (1-8): ")
+    def open_editor(self):
+        self.update_status("Launching level editor...")
+        webbrowser.open(f"file://{os.path.abspath('index.html')}?editor=1")
         
-        if choice == '1':
-            config['sound_enabled'] = not config['sound_enabled']
-        elif choice == '2':
-            difficulties = ['novice', 'adept', 'master', 'elder']
-            current = difficulties.index(config['default_difficulty'])
-            config['default_difficulty'] = difficulties[(current + 1) % 4]
-        elif choice == '3':
-            seasons = ['default', 'autumn', 'winter', 'spring', 'summer', 'halloween']
-            current = seasons.index(config['default_season'])
-            config['default_season'] = seasons[(current + 1) % 6]
-        elif choice == '4':
-            config['fullscreen'] = not config['fullscreen']
-        elif choice == '5':
-            qualities = ['low', 'medium', 'high', 'ultra']
-            current = qualities.index(config['particle_quality'])
-            config['particle_quality'] = qualities[(current + 1) % 4]
-        elif choice == '6':
-            config['show_tutorial'] = not config['show_tutorial']
-        elif choice == '7':
-            config['auto_save'] = not config['auto_save']
-        elif choice == '8':
-            with open(self.config_file, 'w') as f:
-                json.dump(config, f, indent=4)
-            print("\n✅ Configuration saved!")
-            return
+    def open_settings(self):
+        # Create settings window
+        settings_win = tk.Toplevel(self.root)
+        settings_win.title("Settings")
+        settings_win.geometry("400x300")
+        settings_win.configure(bg='#0a0a0a')
         
-        self.configure_game()  # Show menu again
-    
-    def developer_mode(self):
-        """Launch with developer console"""
-        print("\n🔧 DEVELOPER MODE")
-        print("=" * 40)
-        print("1. Launch with console logging")
-        print("2. Launch with performance monitor")
-        print("3. Reset all game data")
-        print("4. Export save data")
-        print("5. Import save data")
-        print("6. Return to main menu")
-        print("=" * 40)
+        tk.Label(settings_win, text="Game Settings",
+                bg='#0a0a0a', fg='#8b7355',
+                font=('Arial', 16, 'bold')).pack(pady=10)
         
-        choice = input("\nSelect option: ")
+        # Settings options
+        settings_frame = tk.Frame(settings_win, bg='#0a0a0a')
+        settings_frame.pack(expand=True, fill='both', padx=20)
         
-        if choice == '1':
-            print("Launching with console logging enabled...")
-            # This would inject console.log statements
-            self.launch_direct()
-        elif choice == '2':
-            print("Launching with performance monitor...")
-            # This would inject performance monitoring
-            self.launch_direct()
-        elif choice == '3':
-            confirm = input("⚠️  This will reset ALL game data. Are you sure? (yes/no): ")
-            if confirm.lower() == 'yes':
-                # Reset localStorage keys
-                print("Game data reset!")
-        elif choice == '4':
-            print("Exporting save data...")
-            # Export localStorage to file
-        elif choice == '5':
-            print("Importing save data...")
-            # Import localStorage from file
-    
-    def run(self):
-        """Main launcher loop"""
-        while True:
-            os.system('clear' if os.name == 'posix' else 'cls')
-            self.show_menu()
-            
-            choice = input("Select option (1-8): ")
-            
-            if choice == '1':
-                self.launch_direct()
-                break
-            elif choice == '2':
-                try:
-                    self.start_local_server()
-                except Exception as e:
-                    print(f"Error starting server: {e}")
-                    input("Press Enter to continue...")
-            elif choice == '3':
-                self.view_statistics()
-            elif choice == '4':
-                self.configure_game()
-            elif choice == '5':
-                self.view_achievements()
-            elif choice == '6':
-                self.read_guide()
-            elif choice == '7':
-                self.developer_mode()
-            elif choice == '8':
-                print("\n👋 Thanks for playing The Watcher's Grove!")
-                sys.exit(0)
+        # Difficulty
+        tk.Label(settings_frame, text="Default Difficulty:",
+                bg='#0a0a0a', fg='#b8a590').pack(anchor='w', pady=5)
+        
+        self.difficulty_var = tk.StringVar(value="adept")
+        difficulties = ["novice", "adept", "master", "elder"]
+        
+        for diff in difficulties:
+            tk.Radiobutton(settings_frame, text=diff.capitalize(),
+                          variable=self.difficulty_var, value=diff,
+                          bg='#0a0a0a', fg='#b8a590',
+                          selectcolor='#1a1510').pack(anchor='w', padx=20)
+        
+        # Season
+        tk.Label(settings_frame, text="Default Season:",
+                bg='#0a0a0a', fg='#b8a590').pack(anchor='w', pady=(20,5))
+        
+        self.season_var = tk.StringVar(value="default")
+        seasons = ["default", "autumn", "winter", "spring", "summer", "halloween"]
+        
+        season_combo = ttk.Combobox(settings_frame, textvariable=self.season_var,
+                                   values=seasons, state='readonly', width=20)
+        season_combo.pack(anchor='w', padx=20)
+        
+        # Save button
+        save_btn = ttk.Button(settings_frame, text="Save Settings",
+                            command=self.save_settings,
+                            style='Option.TButton')
+        save_btn.pack(pady=20)
+        
+    def update_status(self, text):
+        self.status_label.config(text=text)
+        self.root.update()
+        
+    def save_launch_stats(self, mode=None):
+        # Track launches
+        try:
+            stats_file = "launcher_stats.json"
+            if os.path.exists(stats_file):
+                with open(stats_file, 'r') as f:
+                    stats = json.load(f)
             else:
-                print("\n❌ Invalid option. Please try again.")
-                input("Press Enter to continue...")
+                stats = {"launches": 0, "modes": {}}
+            
+            stats["launches"] += 1
+            stats["last_launch"] = datetime.now().isoformat()
+            
+            if mode:
+                if mode not in stats["modes"]:
+                    stats["modes"][mode] = 0
+                stats["modes"][mode] += 1
+            
+            with open(stats_file, 'w') as f:
+                json.dump(stats, f, indent=2)
+                
+        except Exception as e:
+            print(f"Error saving stats: {e}")
+            
+    def load_settings(self):
+        try:
+            if os.path.exists("launcher_settings.json"):
+                with open("launcher_settings.json", 'r') as f:
+                    settings = json.load(f)
+                    self.sound_var.set(settings.get("sound", True))
+                    self.fullscreen_var.set(settings.get("fullscreen", False))
+        except:
+            pass
+            
+    def save_settings(self):
+        settings = {
+            "sound": self.sound_var.get(),
+            "fullscreen": self.fullscreen_var.get(),
+            "difficulty": getattr(self, 'difficulty_var', tk.StringVar(value="adept")).get(),
+            "season": getattr(self, 'season_var', tk.StringVar(value="default")).get()
+        }
+        
+        with open("launcher_settings.json", 'w') as f:
+            json.dump(settings, f, indent=2)
+            
+        messagebox.showinfo("Settings", "Settings saved successfully!")
+
+def main():
+    # Check if game files exist
+    if not os.path.exists("index.html"):
+        messagebox.showerror("Error", "Game files not found! Please ensure index.html is in the same directory.")
+        return
+        
+    root = tk.Tk()
+    app = WatchersGroveLauncher(root)
     
-    def view_achievements(self):
-        """Display achievements progress"""
-        print("\n🏆 ACHIEVEMENTS")
-        print("=" * 40)
-        # This would read from localStorage via a bridge
-        print("Check achievements in-game for now")
-        print("=" * 40)
-        input("\nPress Enter to continue...")
+    # Center window
+    root.update_idletasks()
+    x = (root.winfo_screenwidth() // 2) - (600 // 2)
+    y = (root.winfo_screenheight() // 2) - (500 // 2)
+    root.geometry(f"+{x}+{y}")
     
-    def read_guide(self):
-        """Open game guide"""
-        guide_file = os.path.join(self.game_dir, 'README_ULTIMATE.md')
-        if os.path.exists(guide_file):
-            if sys.platform == 'darwin':
-                os.system(f'open "{guide_file}"')
-            elif sys.platform == 'win32':
-                os.system(f'start "" "{guide_file}"')
-            else:
-                os.system(f'xdg-open "{guide_file}"')
-        else:
-            print("Guide file not found!")
-            input("Press Enter to continue...")
+    root.mainloop()
 
 if __name__ == "__main__":
-    launcher = GameLauncher()
-    
-    # Quick launch with arguments
-    if len(sys.argv) > 1:
-        if sys.argv[1] == '--quick':
-            launcher.launch_direct()
-        elif sys.argv[1] == '--server':
-            port = int(sys.argv[2]) if len(sys.argv) > 2 else 8080
-            launcher.start_local_server(port)
-        elif sys.argv[1] == '--help':
-            print("""
-The Watcher's Grove Launcher
-
-Usage:
-  python3 launcher.py           # Interactive menu
-  python3 launcher.py --quick   # Quick launch
-  python3 launcher.py --server  # Launch with server
-  python3 launcher.py --help    # Show this help
-            """)
-    else:
-        launcher.run()
+    main()

@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Watcher's Grove - Statistics Dashboard</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Griffy&family=Creepster&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Griffy', cursive;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1510 50%, #0a0a0a 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        
+        .dashboard {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            font-family: 'Creepster', cursive;
+            font-size: 3rem;
+            color: #8b7355;
+            text-align: center;
+            text-shadow: 0 0 30px rgba(139, 115, 85, 0.5);
+            margin-bottom: 2rem;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #8b7355;
+            border-radius: 10px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(139, 115, 85, 0.3);
+        }
+        
+        .stat-card h2 {
+            color: #b8a590;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            color: #8b7355;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(139, 115, 85, 0.5);
+        }
+        
+        .stat-label {
+            color: #999;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(139, 115, 85, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #8b7355, #d4a574);
+            transition: width 0.5s ease-out;
+            position: relative;
+        }
+        
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .achievement-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .achievement-icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid #444;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .achievement-icon.unlocked {
+            border-color: #8b7355;
+            background: rgba(139, 115, 85, 0.2);
+        }
+        
+        .achievement-icon:hover {
+            transform: scale(1.1);
+        }
+        
+        .tooltip {
+            position: absolute;
+            bottom: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.95);
+            border: 1px solid #8b7355;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            z-index: 10;
+        }
+        
+        .achievement-icon:hover .tooltip {
+            opacity: 1;
+        }
+        
+        .chart-container {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #8b7355;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            height: 300px;
+            position: relative;
+        }
+        
+        .mode-stats {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            height: 100%;
+            padding: 1rem;
+        }
+        
+        .mode-bar {
+            width: 80px;
+            background: rgba(139, 115, 85, 0.3);
+            border: 2px solid #8b7355;
+            border-radius: 5px 5px 0 0;
+            position: relative;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .mode-bar:hover {
+            background: rgba(139, 115, 85, 0.5);
+        }
+        
+        .mode-label {
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            font-size: 0.9rem;
+        }
+        
+        .mode-value {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #8b7355;
+            font-weight: bold;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+        
+        .action-button {
+            padding: 1rem 2rem;
+            background: rgba(139, 115, 85, 0.2);
+            border: 2px solid #8b7355;
+            color: #8b7355;
+            font-family: 'Griffy', cursive;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-radius: 5px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .action-button:hover {
+            background: #8b7355;
+            color: #0a0a0a;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(139, 115, 85, 0.5);
+        }
+        
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .leaderboard-table th,
+        .leaderboard-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #444;
+        }
+        
+        .leaderboard-table th {
+            color: #8b7355;
+            font-weight: bold;
+        }
+        
+        .leaderboard-table tr:hover {
+            background: rgba(139, 115, 85, 0.1);
+        }
+        
+        .rank-medal {
+            display: inline-block;
+            width: 25px;
+            text-align: center;
+        }
+        
+        .rank-1 { color: #ffd700; }
+        .rank-2 { color: #c0c0c0; }
+        .rank-3 { color: #cd7f32; }
+        
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .mode-stats {
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <h1>The Watcher's Grove - Statistics 👁️</h1>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h2>👁️ Total Eyes Clicked</h2>
+                <div class="stat-value" id="totalEyes">0</div>
+                <div class="stat-label">Lifetime clicks across all modes</div>
+            </div>
+            
+            <div class="stat-card">
+                <h2>🎮 Games Played</h2>
+                <div class="stat-value" id="gamesPlayed">0</div>
+                <div class="stat-label">Total sessions started</div>
+            </div>
+            
+            <div class="stat-card">
+                <h2>⏱️ Play Time</h2>
+                <div class="stat-value" id="playTime">0h</div>
+                <div class="stat-label">Hours spent in the grove</div>
+            </div>
+            
+            <div class="stat-card">
+                <h2>🏆 Best Score</h2>
+                <div class="stat-value" id="bestScore">0</div>
+                <div class="stat-label">Highest score achieved</div>
+            </div>
+            
+            <div class="stat-card">
+                <h2>🔥 Max Combo</h2>
+                <div class="stat-value" id="maxCombo">0x</div>
+                <div class="stat-label">Longest streak maintained</div>
+            </div>
+            
+            <div class="stat-card">
+                <h2>💀 Bosses Defeated</h2>
+                <div class="stat-value" id="bossesDefeated">0/4</div>
+                <div class="stat-label">Ancient guardians conquered</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <h2>🏆 Achievement Progress</h2>
+            <div class="progress-bar">
+                <div class="progress-fill" id="achievementProgress" style="width: 0%"></div>
+            </div>
+            <div style="text-align: center; margin-bottom: 1rem;">
+                <span id="achievementCount">0/16</span> Achievements Unlocked
+            </div>
+            <div class="achievement-grid" id="achievementGrid">
+                <!-- Achievements will be populated here -->
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <h2 style="color: #b8a590; margin-bottom: 1rem;">📊 Mode Preferences</h2>
+            <div class="mode-stats" id="modeChart">
+                <div class="mode-bar" data-mode="story" style="height: 0%">
+                    <div class="mode-value">0</div>
+                    <div class="mode-label">Story</div>
+                </div>
+                <div class="mode-bar" data-mode="survival" style="height: 0%">
+                    <div class="mode-value">0</div>
+                    <div class="mode-label">Survival</div>
+                </div>
+                <div class="mode-bar" data-mode="zen" style="height: 0%">
+                    <div class="mode-value">0</div>
+                    <div class="mode-label">Zen</div>
+                </div>
+                <div class="mode-bar" data-mode="boss" style="height: 0%">
+                    <div class="mode-value">0</div>
+                    <div class="mode-label">Boss</div>
+                </div>
+                <div class="mode-bar" data-mode="practice" style="height: 0%">
+                    <div class="mode-value">0</div>
+                    <div class="mode-label">Practice</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <h2>🏅 Leaderboard</h2>
+            <table class="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Score</th>
+                        <th>Mode</th>
+                        <th>Level</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboardBody">
+                    <!-- Leaderboard entries will be populated here -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="action-buttons">
+            <a href="index.html" class="action-button">🎮 Play Game</a>
+            <button class="action-button" onclick="exportStats()">📊 Export Stats</button>
+            <button class="action-button" onclick="resetStats()">🔄 Reset Stats</button>
+        </div>
+    </div>
+    
+    <script>
+        // Achievement definitions with icons
+        const achievements = {
+            firstEye: { icon: '👁️', name: 'First Contact' },
+            perfectLevel: { icon: '✨', name: 'Perfect Vision' },
+            survivor: { icon: '💪', name: 'Survivor' },
+            madness: { icon: '🌀', name: 'Embrace Madness' },
+            speedDemon: { icon: '⚡', name: 'Speed Demon' },
+            collector: { icon: '👁️‍🗨️', name: 'Eye Collector' },
+            master: { icon: '👑', name: 'Master of the Grove' },
+            ancient: { icon: '📜', name: 'Ancient Knowledge' },
+            bossSlayer: { icon: '⚔️', name: 'Boss Slayer' },
+            seasonalMaster: { icon: '🍂', name: 'Seasonal Master' },
+            comboKing: { icon: '🔥', name: 'Combo King' },
+            levelCreator: { icon: '🛠️', name: 'Level Creator' },
+            perfectRun: { icon: '💯', name: 'Perfect Run' },
+            zenMaster: { icon: '🧘', name: 'Zen Master' },
+            survivor100: { icon: '💀', name: 'Century Survivor' },
+            allUnlocked: { icon: '🏆', name: 'Completionist' }
+        };
+        
+        // Load statistics from localStorage
+        function loadStats() {
+            // Basic stats
+            document.getElementById('totalEyes').textContent = 
+                localStorage.getItem('watchersGrove_totalEyesClicked') || '0';
+            
+            document.getElementById('gamesPlayed').textContent = 
+                localStorage.getItem('watchersGrove_totalGames') || '0';
+            
+            const sessions = parseInt(localStorage.getItem('watchersGrove_sessions') || '0');
+            const hours = Math.floor(sessions * 0.25); // Estimate 15 min per session
+            document.getElementById('playTime').textContent = hours + 'h';
+            
+            // High scores
+            const scores = JSON.parse(localStorage.getItem('watchersGroveScores') || '[]');
+            const bestScore = scores.length > 0 ? scores[0].score : 0;
+            document.getElementById('bestScore').textContent = bestScore.toLocaleString();
+            
+            document.getElementById('maxCombo').textContent = 
+                (localStorage.getItem('watchersGrove_maxCombo') || '0') + 'x';
+            
+            const bossesDefeated = localStorage.getItem('watchersGrove_bossesDefeated') || '0';
+            document.getElementById('bossesDefeated').textContent = bossesDefeated + '/4';
+            
+            // Achievements
+            const unlockedAchievements = JSON.parse(
+                localStorage.getItem('watchersGroveAchievements') || '[]'
+            );
+            
+            const totalAchievements = Object.keys(achievements).length;
+            const unlockedCount = unlockedAchievements.length;
+            const percentage = (unlockedCount / totalAchievements) * 100;
+            
+            document.getElementById('achievementProgress').style.width = percentage + '%';
+            document.getElementById('achievementCount').textContent = 
+                `${unlockedCount}/${totalAchievements}`;
+            
+            // Populate achievement grid
+            const grid = document.getElementById('achievementGrid');
+            grid.innerHTML = '';
+            
+            Object.entries(achievements).forEach(([id, achievement]) => {
+                const div = document.createElement('div');
+                div.className = 'achievement-icon';
+                if (unlockedAchievements.includes(id)) {
+                    div.classList.add('unlocked');
+                }
+                
+                div.innerHTML = `
+                    <span>${achievement.icon}</span>
+                    <div class="tooltip">${achievement.name}</div>
+                `;
+                
+                grid.appendChild(div);
+            });
+            
+            // Mode statistics
+            const modes = ['story', 'survival', 'zen', 'boss', 'practice'];
+            const modePlays = modes.map(mode => ({
+                mode,
+                plays: parseInt(localStorage.getItem(`watchersGrove_${mode}Plays`) || '0')
+            }));
+            
+            const maxPlays = Math.max(...modePlays.map(m => m.plays), 1);
+            
+            modePlays.forEach(({ mode, plays }) => {
+                const bar = document.querySelector(`[data-mode="${mode}"]`);
+                const percentage = (plays / maxPlays) * 80; // Max 80% height
+                bar.style.height = percentage + '%';
+                bar.querySelector('.mode-value').textContent = plays;
+            });
+            
+            // Leaderboard
+            populateLeaderboard(scores.slice(0, 10));
+        }
+        
+        function populateLeaderboard(scores) {
+            const tbody = document.getElementById('leaderboardBody');
+            tbody.innerHTML = '';
+            
+            if (scores.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; opacity: 0.5;">No scores yet</td></tr>';
+                return;
+            }
+            
+            scores.forEach((score, index) => {
+                const tr = document.createElement('tr');
+                const rank = index + 1;
+                const medal = rank <= 3 ? ['🥇', '🥈', '🥉'][rank - 1] : rank;
+                
+                tr.innerHTML = `
+                    <td><span class="rank-medal rank-${rank}">${medal}</span></td>
+                    <td>${score.score.toLocaleString()}</td>
+                    <td>${score.mode}</td>
+                    <td>Level ${score.level}</td>
+                    <td>${new Date(score.date).toLocaleDateString()}</td>
+                `;
+                
+                tbody.appendChild(tr);
+            });
+        }
+        
+        function exportStats() {
+            const stats = {
+                timestamp: new Date().toISOString(),
+                totalEyes: document.getElementById('totalEyes').textContent,
+                gamesPlayed: document.getElementById('gamesPlayed').textContent,
+                playTime: document.getElementById('playTime').textContent,
+                bestScore: document.getElementById('bestScore').textContent,
+                maxCombo: document.getElementById('maxCombo').textContent,
+                bossesDefeated: document.getElementById('bossesDefeated').textContent,
+                achievements: JSON.parse(localStorage.getItem('watchersGroveAchievements') || '[]'),
+                scores: JSON.parse(localStorage.getItem('watchersGroveScores') || '[]')
+            };
+            
+            const dataStr = JSON.stringify(stats, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `WatchersGrove_Stats_${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+        }
+        
+        function resetStats() {
+            if (!confirm('Are you sure you want to reset all statistics? This cannot be undone!')) {
+                return;
+            }
+            
+            const keys = Object.keys(localStorage).filter(key => 
+                key.includes('watchersGrove')
+            );
+            
+            keys.forEach(key => localStorage.removeItem(key));
+            loadStats();
+            alert('Statistics reset successfully!');
+        }
+        
+        // Auto-refresh stats every 5 seconds if game is running
+        setInterval(() => {
+            if (document.hidden) return;
+            loadStats();
+        }, 5000);
+        
+        // Initial load
+        loadStats();
+    </script>
+</body>
+</html>
