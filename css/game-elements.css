@@ -60,6 +60,17 @@
     z-index: 11;
 }
 
+/* Smaller eyes for higher eye counts */
+.eye.small {
+    width: 45px;
+    height: 45px;
+}
+
+.eye.tiny {
+    width: 35px;
+    height: 35px;
+}
+
 .eye::before {
     content: '';
     position: absolute;

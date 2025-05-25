@@ -38,6 +38,16 @@
         height: 50px;
     }
     
+    .eye.small {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .eye.tiny {
+        width: 30px;
+        height: 30px;
+    }
+    
     .eye.boss {
         width: 65px;
         height: 65px;
@@ -76,6 +86,16 @@
     .eye {
         width: 40px;
         height: 40px;
+    }
+    
+    .eye.small {
+        width: 35px;
+        height: 35px;
+    }
+    
+    .eye.tiny {
+        width: 25px;
+        height: 25px;
     }
     
     .eye.boss {

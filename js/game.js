@@ -140,8 +140,18 @@ class WatchersGroveUltimate {
     initLevel() {
         this.playerSequence = [];
         
-        // Generate eye positions
-        const eyeCount = Math.min(3 + this.level, 12);
+        // Generate eye positions - more eyes as levels progress
+        let eyeCount;
+        if (this.gameMode === 'zen') {
+            eyeCount = Math.min(4 + Math.floor(this.level / 3), 16);
+        } else if (this.gameMode === 'survival') {
+            eyeCount = Math.min(3 + Math.floor(this.level / 2), 20);
+        } else if (this.bossMode) {
+            eyeCount = Math.min(6 + this.level, 18);
+        } else {
+            eyeCount = Math.min(4 + this.level, 15);
+        }
+        
         const centerX = this.canvas.width / 2;
         const centerY = this.canvas.height / 2;
         const radius = Math.min(this.canvas.width, this.canvas.height) * 0.3;
@@ -150,11 +160,29 @@ class WatchersGroveUltimate {
         this.uiManager.clearEyes(this.eyes);
         this.eyes = [];
         
-        // Create new eyes
-        const positions = GameData.eyePlacementPatterns.circle(eyeCount, centerX, centerY, radius);
+        // Create new eyes with better placement patterns
+        let positions;
+        if (eyeCount <= 8) {
+            positions = GameData.eyePlacementPatterns.circle(eyeCount, centerX, centerY, radius);
+        } else if (eyeCount <= 12) {
+            // Dual circles for more eyes
+            const innerPositions = GameData.eyePlacementPatterns.circle(Math.ceil(eyeCount / 2), centerX, centerY, radius * 0.6);
+            const outerPositions = GameData.eyePlacementPatterns.circle(Math.floor(eyeCount / 2), centerX, centerY, radius);
+            positions = [...innerPositions, ...outerPositions];
+        } else {
+            // Triple circles for many eyes
+            const innerCount = Math.ceil(eyeCount / 3);
+            const middleCount = Math.ceil((eyeCount - innerCount) / 2);
+            const outerCount = eyeCount - innerCount - middleCount;
+            
+            const innerPositions = GameData.eyePlacementPatterns.circle(innerCount, centerX, centerY, radius * 0.4);
+            const middlePositions = GameData.eyePlacementPatterns.circle(middleCount, centerX, centerY, radius * 0.7);
+            const outerPositions = GameData.eyePlacementPatterns.circle(outerCount, centerX, centerY, radius);
+            positions = [...innerPositions, ...middlePositions, ...outerPositions];
+        }
         
         positions.forEach((pos, index) => {
-            const eye = this.uiManager.createEye(pos.x, pos.y, index, this.bossMode);
+            const eye = this.uiManager.createEye(pos.x, pos.y, index, this.bossMode, eyeCount);
             this.eyes.push(eye);
         });
         
@@ -193,10 +221,15 @@ class WatchersGroveUltimate {
             const patternIndex = Math.min(this.level - 1, this.currentBoss.patterns.length - 1);
             this.sequence = [...this.currentBoss.patterns[patternIndex]];
         } else {
-            // Generate random sequence
-            const baseLength = this.gameMode === 'zen' ? 3 : 
-                             this.gameMode === 'survival' ? Math.min(2 + Math.floor(this.level / 2), 8) :
-                             Math.min(2 + this.level, 6);
+            // Generate random sequence - longer sequences for higher levels
+            let baseLength;
+            if (this.gameMode === 'zen') {
+                baseLength = Math.min(3 + Math.floor(this.level / 4), 8);
+            } else if (this.gameMode === 'survival') {
+                baseLength = Math.min(2 + Math.floor(this.level / 2), 10);
+            } else {
+                baseLength = Math.min(2 + this.level, 8);
+            }
             
             this.sequence = [];
             for (let i = 0; i < baseLength; i++) {

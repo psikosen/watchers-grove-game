@@ -299,11 +299,29 @@ class UIManager {
     }
 
     // Eye creation and management
-    createEye(x, y, index, isBoss = false) {
+    createEye(x, y, index, isBoss = false, totalEyes = 8) {
         const eye = document.createElement('div');
-        eye.className = isBoss ? 'eye boss' : 'eye';
-        eye.style.left = (x - 30) + 'px';
-        eye.style.top = (y - 30) + 'px';
+        
+        // Determine eye size based on total count
+        let eyeClass = 'eye';
+        let offset = 30; // Half of default eye size
+        
+        if (totalEyes > 15) {
+            eyeClass += ' tiny';
+            offset = 17.5; // Half of tiny eye size
+        } else if (totalEyes > 10) {
+            eyeClass += ' small';
+            offset = 22.5; // Half of small eye size
+        }
+        
+        if (isBoss) {
+            eyeClass += ' boss';
+            offset = isBoss ? 40 : offset; // Boss eyes are larger
+        }
+        
+        eye.className = eyeClass;
+        eye.style.left = (x - offset) + 'px';
+        eye.style.top = (y - offset) + 'px';
         eye.dataset.index = index;
         
         document.body.appendChild(eye);
